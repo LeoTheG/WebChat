@@ -21,6 +21,7 @@ wss.on('connection', function connection(ws) {
     text: "Welcome to Leo's chat room, " + ws.id +". Type \'!help\' for help",
   };
   ws.send(JSON.stringify(welcomeMsg));
+  sendAllExcept("server-message",ws.id + " joined the chat room with ip: "+ws._socket.remoteAddress +"!",ws.id);
   const serverTime = {
       type: "server-time",
       text: new Date().toTimeString()
@@ -97,4 +98,24 @@ function makeid() {
     text += possible.charAt(Math.floor(Math.random() * possible.length));
 
   return text;
+}
+
+function sendAll(msgType, msgText){
+  const msg = {
+    type: msgType,
+    text: msgText
+  };
+  wss.clients.forEach((client)=>{
+    client.send(JSON.stringify(msg));
+  });
+}
+function sendAllExcept(msgType, msgText, id){
+const msg = {
+    type: msgType,
+    text: msgText
+  };
+  wss.clients.forEach((client)=>{
+    if(client.id != id)
+    client.send(JSON.stringify(msg));
+  });
 }
