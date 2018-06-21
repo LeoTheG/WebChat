@@ -27,13 +27,15 @@ form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 
     var ws = new WebSocket(HOST);
     var el = document.getElementById('server-time');
 
+    // message from server
     ws.onmessage = function (event) {
       const parsedMsg = JSON.parse(event.data);
       if(parsedMsg.type=="server-time")
         el.innerHTML = 'Server time: ' + parsedMsg.text;
-      else
+      else if(parsedMsg.type=="message" || parsedMsg.type=="server-message")
         $('#messages').append($('<li>').text(parsedMsg.text));
     };
+    // message to server
     $('form').submit(function(){
 			let formVal = $('#m').val();
       var msg = {
