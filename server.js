@@ -15,17 +15,54 @@ const wss = new SocketServer({ server });
 
 wss.on('connection', function connection(ws) {
   console.log("Connected to server");
-  ws.send("Welcome to the chat room");
+  ws.id = makeid();
+  const welcomeMsg = {
+    type: "message",
+    text: "Welcome to Leo's chat room, " + ws.id,
+  };
+  ws.send(JSON.stringify(welcomeMsg));
+  const serverTime = {
+      type: "server-time",
+      text: new Date().toTimeString()
+  }
+  ws.send(JSON.stringify(serverTime));
 
+	// message from client
   ws.on('message',function(msg){
-    console.log("received message from client: " + msg);
-    ws.send(msg);
+		const userMsg = JSON.parse(msg);
+		if(userMsg.type=="message"){
+			userMsg.text = ws.id+": "+userMsg.text;
+			ws.send(JSON.stringify(userMsg));
+		}
+		else if(userMsg.type=="command"){
+			console.log("got command");
+			const command = userMsg.text;
+			console.log("command text:" + userMsg.text);
+			if(command.substring(0,"changename".length)=="changename"){
+				ws.id=command.substring("changename".length);
+			}
+		}
   });
 });
 
-
+// send time to clients
 setInterval(() => {
   wss.clients.forEach((client) => {
-    client.send(new Date().toTimeString());
-  });
+    var msg = {
+      type: "server-time",
+      text: new Date().toTimeString()
+    }
+    //client.send(new Date().toTimeString());
+    client.send(JSON.stringify(msg));
+    });
 }, 1000);
+
+function makeid() {
+  var text = "";
+  var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+  for (var i = 0; i < 5; i++)
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+
+  return text;
+}

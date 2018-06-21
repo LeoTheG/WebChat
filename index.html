@@ -28,14 +28,23 @@ form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 
     var el = document.getElementById('server-time');
 
     ws.onmessage = function (event) {
-      el.innerHTML = 'Server time: ' + event.data;
-      if(!event.data.includes('Pacific'))
-        $('#messages').append($('<li>').text(event.data));
+      const parsedMsg = JSON.parse(event.data);
+      if(parsedMsg.type=="server-time")
+        el.innerHTML = 'Server time: ' + parsedMsg.text;
+      else
+        $('#messages').append($('<li>').text(parsedMsg.text));
     };
     $('form').submit(function(){
-      //ws.broadcast($('#m').val());
-      ws.send($('#m').val());
-      console.log("sending: " + $('#m').val());
+			let formVal = $('#m').val();
+      var msg = {
+        type: "message",
+        text: $('#m').val(),
+      };
+			if(formVal.charAt(0) == '!'){
+				msg.type = "command",
+				msg.text = formVal.substring(1);
+			}
+      ws.send(JSON.stringify(msg));
       $('#m').val('');
       return false;
     });
