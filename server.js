@@ -14,11 +14,12 @@ const server = express()
 const wss = new SocketServer({ server });
 
 wss.on('connection', function connection(ws) {
-  console.log("CONNECTION OK...");
+  console.log("Connected to server");
   ws.send("Welcome to the chat room");
 
   ws.on('message',function(msg){
     console.log("received message from client: " + msg);
+    ws.send(msg);
   });
 });
 
