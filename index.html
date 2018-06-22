@@ -1,7 +1,7 @@
 <html>
-  <head>
-    <title>Leo's Web Chat</title>
-    <style>
+	<head>
+		<title>Leo's Web Chat</title>
+		<style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font: 13px Helvetica, Arial; }
 form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
@@ -10,47 +10,52 @@ form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 
 #messages { list-style-type: none; margin: 0; padding: 0; }
 #messages li { padding: 5px 10px; }
 #messages li:nth-child(odd) { background: #eee; }
-    </style>
-  </head>
+		</style>
+	</head>
 
-  <body>
-    <p id='server-time'></p>
-    <ul id="messages"></ul>
-    <form action="">
-      <input id="m" autocomplete="off" /><button>Send</button>
-    </form>
+	<body>
+		<p id='server-time'></p>
+		<ul id="messages"></ul>
+		<form action="">
+			<input id="m" autocomplete="off" /><button>Send</button>
+		</form>
 
-    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
-    <script>
+		<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+		<script>
 
-    var HOST = location.origin.replace(/^http/, 'ws')
-    var ws = new WebSocket(HOST);
-    var el = document.getElementById('server-time');
+var HOST = location.origin.replace(/^http/, 'ws')
+var ws = new WebSocket(HOST);
+var el = document.getElementById('server-time');
+var alertSound = new Audio("alert.mp3");
 
-    // message from server
-    ws.onmessage = function (event) {
-      const parsedMsg = JSON.parse(event.data);
-      if(parsedMsg.type=="server-time")
-        el.innerHTML = 'Server time: ' + parsedMsg.text;
-      else if(parsedMsg.type=="message" || parsedMsg.type=="server-message")
-        $('#messages').append($('<li>').text(parsedMsg.text));
-    };
-    // message to server
-    $('form').submit(function(){
-			let formVal = $('#m').val();
-      var msg = {
-        type: "message",
-        text: $('#m').val(),
-      };
-			if(formVal.charAt(0) == '!'){
-				msg.type = "command",
-				msg.text = formVal.substring(1);
-			}
-      ws.send(JSON.stringify(msg));
-      $('#m').val('');
-      return false;
-    });
-
-    </script>
-  </body>
+// message from server
+ws.onmessage = function (event) {
+	const parsedMsg = JSON.parse(event.data);
+	if(parsedMsg.type=="server-time")
+		el.innerHTML = 'Server time: ' + parsedMsg.text;
+	else if(parsedMsg.type=="message" || parsedMsg.type=="server-message")
+		$('#messages').append($('<li>').text(parsedMsg.text));
+  // send audio alert when receiving message
+  if(parsedMsg.type=="message" && parsedMsg.selfMsg === false){
+    alertSound.play();
+  }
+    
+};
+// message to server
+$('form').submit(function(){
+	let formVal = $('#m').val();
+	var msg = {
+		type: "message",
+		text: $('#m').val(),
+	};
+	if(formVal.charAt(0) == '!'){
+		msg.type = "command",
+			msg.text = formVal.substring(1);
+	}
+	ws.send(JSON.stringify(msg));
+	$('#m').val('');
+	return false;
+});
+		</script>
+	</body>
 </html>

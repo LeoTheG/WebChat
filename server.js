@@ -5,35 +5,55 @@ const SocketServer = require('ws').Server;
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
-const INDEX = path.join(__dirname, 'index.html');
 
 const server = express()
-  .use((req, res) => res.sendFile(INDEX) )
+  .use(express.static(__dirname))
+  .use(express.static('public'))
   .listen(PORT, () => console.log(`Listening on ${ PORT }`));
+/*
+var server = express();
+
+//server.use(express.static(__dirname+'/public'));
+server.use((req,res)=>res.sendFile(INDEX))
+.listen(PORT);
+*/
 
 const wss = new SocketServer({ server });
 
+var clients = [];
+
 wss.on('connection', function connection(ws) {
-  console.log("Connected to server");
   ws.id = makeid();
+  console.log("%s Connected to server",ws.id);
+  ws.isAlive = true;
+  ws.on('pong', ()=>{ws.isAlive=true});
   const welcomeMsg = {
     type: "server-message",
     text: "Welcome to Leo's chat room, " + ws.id +". Type \'!help\' for help",
   };
   ws.send(JSON.stringify(welcomeMsg));
-  sendAllExcept("server-message",ws.id + " joined the chat room with ip: "+ws._socket.remoteAddress +"!",ws.id);
+  sendAllExcept("server-message",ws.id + " joined the chat room!",ws.id);
   const serverTime = {
       type: "server-time",
       text: new Date().toTimeString()
   }
   ws.send(JSON.stringify(serverTime));
 
+  clients.push(ws);
+
 	// message from client
   ws.on('message',function(msg){
 		const userMsg = JSON.parse(msg);
 		if(userMsg.type=="message"){
 			userMsg.text = ws.id+": "+userMsg.text;
+
       wss.clients.forEach((client)=>{
+        console.log("going thru clients");
+        if(client==ws){
+          userMsg.selfMsg = true;
+          console.log("same client");
+        }
+        else userMsg.selfMsg = false;
         client.send(JSON.stringify(userMsg));
       });
 		}
@@ -49,7 +69,7 @@ wss.on('connection', function connection(ws) {
       else if(command.substring(0,"help".length)=="help"){
         const helpMsg = {
           type: "server-message",
-          text: "Type \'!changename <some_name>\' to change your name!",
+          text: "Type \'!changename <some_name>\' to change your name! Type \'!users\' for a list of connected users",
         };
         ws.send(JSON.stringify(helpMsg));
       }
@@ -70,6 +90,7 @@ wss.on('connection', function connection(ws) {
     }
   });
 });
+
 function createMsg(msgType,msgText){
   let msg = {
     type: msgType,
@@ -78,6 +99,20 @@ function createMsg(msgType,msgText){
   return msg;
 }
 
+const ping = setInterval(()=>{
+  clients.forEach((ws)=>{
+    // check if open
+    if(ws.readyState==ws.OPEN) ws.ping();
+    else ws.isAlive = false;
+    if(ws.isAlive === false){
+      sendAll("server-message",ws.id +" has disconnected");
+      removeClient(ws);
+      return;
+    }
+    ws.isAlive = false;
+  });
+}, 1000);
+
 // send time to clients
 setInterval(() => {
   wss.clients.forEach((client) => {
@@ -85,7 +120,6 @@ setInterval(() => {
       type: "server-time",
       text: new Date().toTimeString()
     }
-    //client.send(new Date().toTimeString());
     client.send(JSON.stringify(msg));
     });
 }, 1000);
@@ -118,4 +152,11 @@ const msg = {
     if(client.id != id)
     client.send(JSON.stringify(msg));
   });
+}
+
+function removeClient(ws){
+  const indexToRemove = clients.indexOf(ws);
+  if(indexToRemove > -1){
+    clients.splice(indexToRemove,1);
+  }
 }
